@@ -18,7 +18,6 @@ public class SimulationUIManager : MonoBehaviour
     [SerializeField] private TextMeshProUGUI distanceText;
     [SerializeField] private TextMeshProUGUI timeText;
     [SerializeField] private TextMeshProUGUI cadenceText;
-    [SerializeField] private TextMeshProUGUI gearText;
     [SerializeField] private TextMeshProUGUI modeText;
 
     // Affichage training
@@ -42,9 +41,7 @@ public class SimulationUIManager : MonoBehaviour
     [SerializeField] private TextMeshProUGUI powerValueText;
     [SerializeField] private TextMeshProUGUI speedValueText;
 
-    // Gears
-    [SerializeField] private Button gearUpButton;
-    [SerializeField] private Button gearDownButton;
+
 
     // Slope bar
     [SerializeField] private Image slopeBarFill;
@@ -87,12 +84,6 @@ public class SimulationUIManager : MonoBehaviour
         if (stopButton != null)
             stopButton.onClick.AddListener(StopSimulation);
 
-        if (gearUpButton != null)
-            gearUpButton.onClick.AddListener(GearUp);
-
-        if (gearDownButton != null)
-            gearDownButton.onClick.AddListener(GearDown);
-
         // Wire sliders
         if (powerSlider != null)
             powerSlider.onValueChanged.AddListener((v) => { if (powerValueText) powerValueText.text = $"{v:F0}W"; });
@@ -133,10 +124,6 @@ public class SimulationUIManager : MonoBehaviour
         // Cadence
         if (cadenceText != null)
             cadenceText.text = $"{state.Cadence:F0} RPM";
-
-        // Pignon
-        if (gearText != null)
-            gearText.text = $"Gear {state.GearIndex + 1}/{simulationEngine.TotalGears}";
 
         // Mode
         if (modeText != null)
@@ -197,18 +184,6 @@ public class SimulationUIManager : MonoBehaviour
     {
         if (simulationEngine != null)
             simulationEngine.StopSimulation();
-    }
-
-    void GearUp()
-    {
-        if (simulationEngine != null && simulationEngine.CurrentGearIndex < simulationEngine.TotalGears - 1)
-            simulationEngine.ChangeGear(simulationEngine.CurrentGearIndex + 1);
-    }
-
-    void GearDown()
-    {
-        if (simulationEngine != null && simulationEngine.CurrentGearIndex > 0)
-            simulationEngine.ChangeGear(simulationEngine.CurrentGearIndex - 1);
     }
 
     void UpdateButtonStates(bool simulationStopped)

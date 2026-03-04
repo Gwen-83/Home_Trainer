@@ -22,7 +22,6 @@ public class SimulationState
     public double Pente;
     public double PuissanceWatts;
     public double Cadence;
-    public int GearIndex;
 
     // targets
     public double TargetPower;

@@ -46,16 +46,6 @@ public class SimulationEngine : MonoBehaviour
     private int currentTrainingStep = 0;
     private double elapsedInStep = 0.0;
 
-    // Gears (Zwift-like ratios)
-    private static readonly double[] ZwiftCogRatios =
-    {
-        0.75, 0.87, 0.99, 1.11, 1.23, 1.38,
-        1.53, 1.68, 1.86, 2.04, 2.22, 2.40,
-        2.61, 2.82, 3.03, 3.24, 3.49, 3.74,
-        3.99, 4.24, 4.54, 4.84, 5.14, 5.49
-    };
-    private int gearIndex = 11;
-
     // Cadence
     private double filteredCadence = 0.0;
     private const double CadenceFilterTau = 0.3; // seconds
@@ -179,13 +169,6 @@ public class SimulationEngine : MonoBehaviour
         Debug.Log($"Simulation arrêtée après {elapsed:F1}s");
     }
 
-    public void ChangeGear(int newIndex)
-    {
-        gearIndex = Mathf.Clamp(newIndex, 0, ZwiftCogRatios.Length - 1);
-        physics.SetGearRatio(ZwiftCogRatios[gearIndex]);
-        Debug.Log($"Pignon changé: {gearIndex} (ratio {ZwiftCogRatios[gearIndex]:F2})");
-    }
-
     void FixedUpdate()
     {
         if (!running) return;
@@ -212,8 +195,7 @@ public class SimulationEngine : MonoBehaviour
             Mode = mode,
             DeltaTime = dt,
             SessionElapsedSeconds = elapsed,
-            Pente = slope,
-            GearIndex = gearIndex
+            Pente = slope
         };
 
         if (mode == SimulationMode.OfflineReplay)
@@ -338,9 +320,8 @@ public class SimulationEngine : MonoBehaviour
         if (physics.Vitesse < 0.1)
             return 0;
 
-        double ratio = gearIndex < ZwiftCogRatios.Length ? ZwiftCogRatios[gearIndex] : 1.0;
         double circumference = 2 * System.Math.PI * config.Rw;
-        double wheelRpm = (physics.Vitesse / (ratio * circumference)) * 60.0;
+        double wheelRpm = (physics.Vitesse / circumference) * 60.0;
 
         return wheelRpm;
     }
@@ -357,6 +338,4 @@ public class SimulationEngine : MonoBehaviour
 
     public bool IsRunning => running;
     public SimulationState CurrentState { get; private set; }
-    public int CurrentGearIndex => gearIndex;
-    public int TotalGears => ZwiftCogRatios.Length;
 }

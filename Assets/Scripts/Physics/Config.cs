@@ -4,12 +4,18 @@ using UnityEngine;
 public class Config
 {
     // Paramètres physiques du cycliste
-    public double Masse = 71.0;      // kg
+    public double MasseCycliste = 70.0; // kg - masse du cycliste
+    public double MasseVelo = 10.0;     // kg - masse du vélo
+    public double Masse => MasseCycliste + MasseVelo; // masse totale
     public double CdA = 0.32;        // coefficient aérodynamique
     public double Crr = 0.004;       // coefficient de roulement
     public double Rho = 1.225;       // densité air (kg/m³)
     public double Ieq = 0.15;        // inertie équivalente (kg·m²)
     public double Rw = 0.34;         // rayon roue (m)
+
+    // Limites d'accélération/décélération
+    public double MaxAcceleration = 5.0;  // m/s² - accélération maximale réaliste
+    public double MaxDeceleration = -9.0; // m/s² - décélération maximale réaliste (freinage)
 
     // Paramètres PID pour le mode Constant Speed
     public double PID_Kp = 0.5;      // Gain proportionnel

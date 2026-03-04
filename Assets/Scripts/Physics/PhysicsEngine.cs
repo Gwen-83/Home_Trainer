@@ -14,9 +14,8 @@ public class PhysicsEngine
     // Gravity
     private const double g = 9.81;
 
-    // Wheel circumference à partir du ratio
+    // Wheel circumference
     private double Rw => config.Rw;
-    private double Rapport { get; set; } = 0.335; // À initialiser depuis l'extérieur
 
     public double Vitesse => vitesse;
     public double DistanceCumuleeMetres => distanceCumuleeMetres;
@@ -33,18 +32,49 @@ public class PhysicsEngine
     {
         if (deltaTime <= 0) return vitesse;
 
+        // Clamp deltaTime pour stabilité numérique à 50 Hz
+        deltaTime = Math.Clamp(deltaTime, config.MinDeltaTime, config.MaxDeltaTime);
+
         // Clamp pente
         pente = Math.Clamp(pente, -0.06, 0.06);
 
         // Calcul accélération
         double acceleration = CalculerAcceleration(puissanceWatts, pente);
 
+        // Limitation accélération/décélération irréaliste
+        acceleration = Math.Clamp(acceleration, config.MaxDeceleration, config.MaxAcceleration);
+
+        // Gestion roue libre : si puissance nulle et vitesse > 0, permettre décélération naturelle
+        if (puissanceWatts <= 0 && vitesse > 0)
+        {
+            // Décélération due aux résistances seulement
+            acceleration = Math.Max(acceleration, config.MaxDeceleration);
+        }
+
+        // Sécurité NaN
+        if (double.IsNaN(acceleration) || double.IsInfinity(acceleration))
+        {
+            acceleration = 0.0;
+        }
+
         // Intégration vitesse
         vitesse += acceleration * deltaTime;
         if (vitesse < 0) vitesse = 0;
 
+        // Sécurité NaN pour vitesse
+        if (double.IsNaN(vitesse) || double.IsInfinity(vitesse))
+        {
+            vitesse = 0.0;
+        }
+
         // Intégration distance
         distanceCumuleeMetres += vitesse * deltaTime;
+
+        // Sécurité NaN pour distance
+        if (double.IsNaN(distanceCumuleeMetres) || double.IsInfinity(distanceCumuleeMetres))
+        {
+            distanceCumuleeMetres = 0.0;
+        }
 
         return vitesse;
     }
@@ -54,23 +84,49 @@ public class PhysicsEngine
     /// </summary>
     public double CalculerAcceleration(double puissanceWatts, double pente)
     {
-        // Forces résistantes
-        double Fg = config.Masse * g * pente;                           // Gravité
-        double Frr = config.Masse * g * config.Crr;                     // Roulement
-        double Fa = 0.5 * config.Rho * config.CdA * vitesse * vitesse; // Aérodynamique
+        // Calcul force gravité
+        double Fg = config.Masse * g * pente;
+
+        // Calcul résistance roulement
+        double Frr = config.Masse * g * config.Crr;
+
+        // Calcul résistance aérodynamique
+        double Fa = 0.5 * config.Rho * config.CdA * vitesse * vitesse;
+
+        // Forces résistantes totales
         double Fres = Fg + Frr + Fa;
 
+        // Sécurité NaN pour forces
+        if (double.IsNaN(Fres) || double.IsInfinity(Fres))
+        {
+            Fres = 0.0;
+        }
+
         // Vitesse effective pour éviter division par zéro
-        double vEff = Math.Max(vitesse, 0.5);
+        double vEff = Math.Max(vitesse, 0.01);
 
         // Force propulsive
         double Fprop = puissanceWatts / vEff;
 
-        // Moment d'inertie équivalent ramenée à l'axe arrière
-        double meqProj = config.Masse + config.Ieq / Math.Pow(Rw * Rapport, 2);
+        // Gestion inertie équivalente
+        double meqProj = config.Masse + config.Ieq;
+
+        // Protection contre division par zéro pour masse équivalente
+        if (meqProj <= 0 || double.IsNaN(meqProj) || double.IsInfinity(meqProj))
+        {
+            meqProj = config.Masse;
+        }
 
         // Accélération
-        return (Fprop - Fres) / meqProj;
+        double acceleration = (Fprop - Fres) / meqProj;
+
+        // Sécurité NaN finale
+        if (double.IsNaN(acceleration) || double.IsInfinity(acceleration))
+        {
+            acceleration = 0.0;
+        }
+
+        return acceleration;
     }
 
     /// <summary>
@@ -83,7 +139,22 @@ public class PhysicsEngine
         double Frr = config.Masse * g * config.Crr;
         double Fa = 0.5 * config.Rho * config.CdA * vitesseMs * vitesseMs;
         double Fres = Fg + Frr + Fa;
-        return Fres * vitesseMs;
+
+        // Sécurité NaN
+        if (double.IsNaN(Fres) || double.IsInfinity(Fres))
+        {
+            Fres = 0.0;
+        }
+
+        double puissanceResistive = Fres * vitesseMs;
+
+        // Sécurité NaN
+        if (double.IsNaN(puissanceResistive) || double.IsInfinity(puissanceResistive))
+        {
+            puissanceResistive = 0.0;
+        }
+
+        return puissanceResistive;
     }
 
     /// <summary>
@@ -95,11 +166,4 @@ public class PhysicsEngine
         distanceCumuleeMetres = 0.0;
     }
 
-    /// <summary>
-    /// Fixe manuellement le ratio de pignon (index dans la couronne)
-    /// </summary>
-    public void SetGearRatio(double ratio)
-    {
-        Rapport = ratio;
-    }
 }
