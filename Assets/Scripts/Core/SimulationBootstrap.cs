@@ -112,7 +112,21 @@ public class SimulationBootstrap : MonoBehaviour
         CurrentPowerWatts = puissanceConstante;
         ElapsedTimeSeconds += dt;
 
-        rider.Translate(Vector3.forward * (float)vitesseMs * (float)dt);
+        // positionner le rider : soit par translation locale (ancienne méthode), soit en suivant la trajectoire GPX
+        if (rider != null && gpxReader != null && gpxReader.gpxPoints.Count > 1)
+        {
+            Vector3 pos = gpxReader.GetUnityPositionAtDistance((float)CurrentDistance);
+            rider.position = pos;
+            // orientation en regardant un petit peu plus en avant
+            Vector3 ahead = gpxReader.GetUnityPositionAtDistance((float)CurrentDistance + 0.5f);
+            Vector3 dir = ahead - pos;
+            if (dir.sqrMagnitude > 0.0001f)
+                rider.rotation = Quaternion.LookRotation(dir.normalized);
+        }
+        else if (rider != null)
+        {
+            rider.Translate(Vector3.forward * (float)vitesseMs * (float)dt);
+        }
 
         UpdateUI();
     }

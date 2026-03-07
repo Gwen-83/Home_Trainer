@@ -32,6 +32,10 @@ public class SimulationEngine : MonoBehaviour
     double targetSpeedKmh = 20.0;
     double elapsed = 0.0;
 
+    // Propriétés publiques pour ajuster les cibles en temps réel
+    public double TargetPower { get => targetPower; set { if (mode == SimulationMode.ConstantPower || mode == SimulationMode.Training) targetPower = value; } }
+    public double TargetSpeedKmh { get => targetSpeedKmh; set { if (mode == SimulationMode.ConstantSpeed) { targetSpeedKmh = value; pidSpeedController.Reset(); } } }
+
     // BLE-derived power
     double lastBlePower = 0.0;
 
@@ -53,6 +57,16 @@ public class SimulationEngine : MonoBehaviour
     // Timing
     private System.Diagnostics.Stopwatch sessionStopwatch;
 
+    // Gear
+    private static readonly double[] zwiftCogRatios =
+    {
+        0.75, 0.87, 0.99, 1.11, 1.23, 1.38,
+        1.53, 1.68, 1.86, 2.04, 2.22, 2.40,
+        2.61, 2.82, 3.03, 3.24, 3.49, 3.74,
+        3.99, 4.24, 4.54, 4.84, 5.14, 5.49
+    };
+    private int gearIndex = 10; // 2.22
+
     // OfflineReplay
     private List<SimulationState> replayData = new List<SimulationState>();
     private int replayIndex = 0;
@@ -68,6 +82,8 @@ public class SimulationEngine : MonoBehaviour
             recorder = GetComponent<SessionRecorder>();
         if (sessionStopwatch == null)
             sessionStopwatch = new System.Diagnostics.Stopwatch();
+
+        physics.SetGearRatio(zwiftCogRatios[gearIndex]);
     }
 
     void Start()
@@ -195,7 +211,9 @@ public class SimulationEngine : MonoBehaviour
             Mode = mode,
             DeltaTime = dt,
             SessionElapsedSeconds = elapsed,
-            Pente = slope
+            Pente = slope,
+            GearIndex = gearIndex,
+            TotalGears = zwiftCogRatios.Length
         };
 
         if (mode == SimulationMode.OfflineReplay)
@@ -259,12 +277,19 @@ public class SimulationEngine : MonoBehaviour
             {
                 try
                 {
-                    // Send simulation parameters
-                    bleService.SendSimulationSet(slope, config.Crr, config.CdA);
-
-                    // Send target power if not in Free mode
-                    if (mode != SimulationMode.Free)
+                    if (mode == SimulationMode.ConstantPower || mode == SimulationMode.ConstantSpeed)
+                    {
+                        // En mode puissance ou vitesse constante, forcer la puissance sans simulation
+                        bleService.SendSimulationSet(0f, 0f, 0f);
                         bleService.SendTargetPower((short)state.PuissanceWatts);
+                    }
+                    else
+                    {
+                        // Mode normal : simulation + target power si nécessaire
+                        bleService.SendSimulationSet(slope, config.Crr, config.CdA);
+                        if (mode != SimulationMode.Free)
+                            bleService.SendTargetPower((short)state.PuissanceWatts);
+                    }
                 }
                 catch (System.Exception ex)
                 {
@@ -320,10 +345,10 @@ public class SimulationEngine : MonoBehaviour
         if (physics.Vitesse < 0.1)
             return 0;
 
-        double circumference = 2 * System.Math.PI * config.Rw;
-        double wheelRpm = (physics.Vitesse / circumference) * 60.0;
+        double omega = physics.Vitesse / (zwiftCogRatios[gearIndex] * config.Rw);
+        double cadenceBrute = omega * 60.0 / (2 * System.Math.PI);
 
-        return wheelRpm;
+        return cadenceBrute;
     }
 
     private double FilterCadence(double rawCadence, double dt)
@@ -338,4 +363,10 @@ public class SimulationEngine : MonoBehaviour
 
     public bool IsRunning => running;
     public SimulationState CurrentState { get; private set; }
+
+    public void ChangeGear(int newIndex)
+    {
+        gearIndex = System.Math.Clamp(newIndex, 0, zwiftCogRatios.Length - 1);
+        physics.SetGearRatio(zwiftCogRatios[gearIndex]);
+    }
 }

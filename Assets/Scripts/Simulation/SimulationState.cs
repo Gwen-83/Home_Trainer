@@ -23,6 +23,10 @@ public class SimulationState
     public double PuissanceWatts;
     public double Cadence;
 
+    // gear
+    public int GearIndex;
+    public int TotalGears;
+
     // targets
     public double TargetPower;
     public double TargetSpeedKmh;

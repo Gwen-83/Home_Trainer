@@ -18,9 +18,9 @@ public class Config
     public double MaxDeceleration = -9.0; // m/s² - décélération maximale réaliste (freinage)
 
     // Paramètres PID pour le mode Constant Speed
-    public double PID_Kp = 0.5;      // Gain proportionnel
-    public double PID_Ki = 0.05;     // Gain intégral
-    public double PID_Kd = 0.1;      // Gain dérivé
+    public double PID_Kp = 50.0;     // Gain proportionnel (augmenté 100x pour réactivité)
+    public double PID_Ki = 0.0;      // Gain intégral
+    public double PID_Kd = 0.0;      // Gain dérivé
 
     // Paramètres de simulation
     public double TargetTickRateMs = 20.0;  // ~50 Hz

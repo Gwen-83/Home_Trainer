@@ -86,13 +86,28 @@ public class SimulationUIManager : MonoBehaviour
 
         // Wire sliders
         if (powerSlider != null)
-            powerSlider.onValueChanged.AddListener((v) => { if (powerValueText) powerValueText.text = $"{v:F0}W"; });
+            powerSlider.onValueChanged.AddListener((v) => { 
+                if (powerValueText) powerValueText.text = $"{v:F0}W";
+                if (simulationEngine != null && simulationEngine.IsRunning && (simulationEngine.CurrentState.Mode == SimulationMode.ConstantPower || simulationEngine.CurrentState.Mode == SimulationMode.Training))
+                    simulationEngine.TargetPower = v;
+            });
 
         if (speedSlider != null)
-            speedSlider.onValueChanged.AddListener((v) => { if (speedValueText) speedValueText.text = $"{v:F1} km/h"; });
+            speedSlider.onValueChanged.AddListener((v) => { 
+                if (speedValueText) speedValueText.text = $"{v:F1} km/h";
+                if (simulationEngine != null && simulationEngine.IsRunning && simulationEngine.CurrentState.Mode == SimulationMode.ConstantSpeed)
+                    simulationEngine.TargetSpeedKmh = v;
+            });
 
         UpdateButtonStates(true);
         UpdateBleStatus();
+
+        // Initialize slider texts
+        if (powerSlider != null && powerValueText != null)
+            powerValueText.text = $"{powerSlider.value:F0}W";
+
+        if (speedSlider != null && speedValueText != null)
+            speedValueText.text = $"{speedSlider.value:F1} km/h";
     }
 
     void HandleSimulationTick(SimulationState state)

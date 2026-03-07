@@ -10,6 +10,7 @@ public class PhysicsEngine
     private double vitesse = 0.0;
     private double distanceCumuleeMetres = 0.0;
     private readonly Config config;
+    private double gearRatio = 1.0; // Rapport de transmission (gear ratio)
 
     // Gravity
     private const double g = 9.81;
@@ -103,13 +104,13 @@ public class PhysicsEngine
         }
 
         // Vitesse effective pour éviter division par zéro
-        double vEff = Math.Max(vitesse, 0.01);
+        double vEff = Math.Max(vitesse, 0.5);
 
         // Force propulsive
         double Fprop = puissanceWatts / vEff;
 
-        // Gestion inertie équivalente
-        double meqProj = config.Masse + config.Ieq;
+        // Moment d'inertie équivalent ramené à l'axe arrière
+        double meqProj = config.Masse + config.Ieq / Math.Pow(Rw * gearRatio, 2);
 
         // Protection contre division par zéro pour masse équivalente
         if (meqProj <= 0 || double.IsNaN(meqProj) || double.IsInfinity(meqProj))
@@ -164,6 +165,15 @@ public class PhysicsEngine
     {
         vitesse = 0.0;
         distanceCumuleeMetres = 0.0;
+    }
+
+    /// <summary>
+    /// Définit le rapport de transmission (gear ratio)
+    /// </summary>
+    public void SetGearRatio(double ratio)
+    {
+        if (ratio > 0)
+            gearRatio = ratio;
     }
 
 }
